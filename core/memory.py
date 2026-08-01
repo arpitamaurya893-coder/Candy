@@ -29,16 +29,17 @@ class Memory:
             }
         }
 
-        # Memory file
         self.file = "config/memory.json"
 
-        # Stored memories
         self.data = {
             "owner_name": None,
             "facts": {}
         }
 
         self.load()
+
+
+    # ---------- Load Memory ----------
 
     def load(self):
 
@@ -57,6 +58,9 @@ class Memory:
         except Exception as e:
 
             print(f"⚠️ Memory load error: {e}")
+
+
+    # ---------- Save Memory ----------
 
     def save(self):
 
@@ -81,12 +85,40 @@ class Memory:
 
             print(f"⚠️ Memory save error: {e}")
 
+
+    # ---------- Remember ----------
+
     def remember(self, key, value):
 
         self.data["facts"][key] = value
 
         self.save()
 
+
+    # ---------- Recall ----------
+
     def recall(self, key):
 
         return self.data["facts"].get(key)
+
+
+    # ---------- Forget ----------
+
+    def forget(self, key):
+
+        if key in self.data["facts"]:
+
+            del self.data["facts"][key]
+
+            self.save()
+
+            return True
+
+        return False
+
+
+    # ---------- Get All Memories ----------
+
+    def get_all_memories(self):
+
+        return self.data["facts"]
