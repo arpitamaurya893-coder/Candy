@@ -4,6 +4,7 @@ import customtkinter as ctk
 
 from gui.ai_core import AICore
 from gui.status_bar import StatusBar
+from core.wake_word import WakeWord
 
 
 class CandyWindow(ctk.CTk):
@@ -50,8 +51,11 @@ class CandyWindow(ctk.CTk):
 
         # Status Bar
         self.status = StatusBar(self)
-        self.status.update_status("🤍 Waiting...")
+        self.status.update_status("💤 Sleeping...")
         self.status.grid(row=2, column=0, pady=(0, 20))
+
+        # Wake Word
+        self.wake_word = WakeWord()
 
         # Start Voice Assistant
         self.voice_thread = threading.Thread(
@@ -71,32 +75,79 @@ class CandyWindow(ctk.CTk):
         brain = Brain()
 
         print("🤍 Candy is Online, Boss!")
+        print("💤 Waiting for wake word...")
 
         while True:
 
+            # ---------- Sleeping ----------
             self.after(
                 0,
-                lambda: self.status.update_status("🎤 Listening...")
+                lambda: self.status.update_status("💤 Sleeping...")
             )
 
             command = listener.listen()
 
             if not command:
-                self.after(
-                    0,
-                    lambda: self.status.update_status("🤍 Waiting...")
-                )
                 continue
 
+            # ---------- Wake Word ----------
+            if not self.wake_word.detected(command):
+                print("💤 Wake word not detected.")
+                continue
+
+            print("✨ Wake word detected!")
+
+            # Check whether command is already included
+            wake_words = [
+                "hey candy",
+                "hi candy",
+                "hello candy",
+                "candy"
+            ]
+
+            command_after_wake = command
+
+            for word in wake_words:
+
+                if word in command_after_wake:
+
+                    command_after_wake = command_after_wake.replace(
+                        word,
+                        "",
+                        1
+                    ).strip()
+
+                    break
+
+            # ---------- Wake only ----------
+            if not command_after_wake:
+
+                self.after(
+                    0,
+                    lambda: self.status.update_status("👋 Hello Boss...")
+                )
+
+                speaker.speak("Yes Boss?")
+
+                self.after(
+                    0,
+                    lambda: self.status.update_status("🎤 Listening...")
+                )
+
+                command_after_wake = listener.listen()
+
+                if not command_after_wake:
+                    continue
+
+            # ---------- Thinking ----------
             self.after(
                 0,
                 lambda: self.status.update_status("🧠 Thinking...")
             )
 
-            response = brain.process(command)
+            response = brain.process(command_after_wake)
 
-            print(f"🤍 Candy: {response}")
-
+            # ---------- Speaking ----------
             self.after(
                 0,
                 lambda: self.status.update_status("🗣 Speaking...")
@@ -104,7 +155,8 @@ class CandyWindow(ctk.CTk):
 
             speaker.speak(response)
 
+            # ---------- Back to Sleep ----------
             self.after(
                 0,
-                lambda: self.status.update_status("🤍 Waiting...")
+                lambda: self.status.update_status("💤 Sleeping...")
             )
