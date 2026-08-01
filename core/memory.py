@@ -29,8 +29,10 @@ class Memory:
             }
         }
 
+        # Memory file
         self.file = "config/memory.json"
 
+        # Stored memories
         self.data = {
             "owner_name": None,
             "facts": {}
