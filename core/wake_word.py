@@ -1,10 +1,16 @@
 class WakeWord:
 
     def __init__(self):
+
         self.words = [
             "hey candy",
             "hi candy",
             "hello candy",
+            "hay candy",
+            "hey cand",
+            "hey kandi",
+            "hi kandi",
+            "hello kandi",
             "candy"
         ]
 
@@ -13,6 +19,11 @@ class WakeWord:
         if not command:
             return False
 
-        command = command.lower()
+        command = command.lower().strip()
 
-        return any(word in command for word in self.words)
+        for word in self.words:
+
+            if word in command:
+                return True
+
+        return False
