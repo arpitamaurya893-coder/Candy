@@ -1,5 +1,7 @@
+import threading
 import tkinter as tk
 import customtkinter as ctk
+
 from gui.ai_core import AICore
 from gui.status_bar import StatusBar
 
@@ -41,37 +43,68 @@ class CandyWindow(ctk.CTk):
         )
         self.circle.grid(row=1, column=0, pady=20)
 
-        # Create AI Core
+        # AI Core
         self.ai = AICore(self.circle)
         self.ai.draw()
+        self.ai.pulse()
 
-        
         # Status Bar
         self.status = StatusBar(self)
         self.status.update_status("🤍 Waiting...")
         self.status.grid(row=2, column=0, pady=(0, 20))
 
-    def create_ai_core(self):
-        # Outer Ring
-        self.circle.create_oval(
-            20, 20,
-            150, 150,
-            outline="white",
-            width=2
+        # Start Voice Assistant
+        self.voice_thread = threading.Thread(
+            target=self.start_assistant,
+            daemon=True
         )
+        self.voice_thread.start()
 
-        # Main Core
-        self.ai_core = self.circle.create_oval(
-            35, 35,
-            135, 135,
-            fill="white",
-            outline=""
-        )
+    def start_assistant(self):
 
-        # Center Dot
-        self.circle.create_oval(
-            80, 80,
-            90, 90,
-            fill="#0b0b0b",
-            outline=""
-        )
+        from core.listener import Listener
+        from core.speaker import Speaker
+        from core.brain import Brain
+
+        listener = Listener()
+        speaker = Speaker()
+        brain = Brain()
+
+        print("🤍 Candy is Online, Boss!")
+
+        while True:
+
+            self.after(
+                0,
+                lambda: self.status.update_status("🎤 Listening...")
+            )
+
+            command = listener.listen()
+
+            if not command:
+                self.after(
+                    0,
+                    lambda: self.status.update_status("🤍 Waiting...")
+                )
+                continue
+
+            self.after(
+                0,
+                lambda: self.status.update_status("🧠 Thinking...")
+            )
+
+            response = brain.process(command)
+
+            print(f"🤍 Candy: {response}")
+
+            self.after(
+                0,
+                lambda: self.status.update_status("🗣 Speaking...")
+            )
+
+            speaker.speak(response)
+
+            self.after(
+                0,
+                lambda: self.status.update_status("🤍 Waiting...")
+            )

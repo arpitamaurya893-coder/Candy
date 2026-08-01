@@ -12,7 +12,7 @@ class Speaker:
 
     def speak(self, text):
 
-        print(f"🤍 Candy: {text}")
+        
 
         asyncio.run(self._speak(text))
 
