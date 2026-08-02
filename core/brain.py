@@ -4,6 +4,7 @@ from core.intent import INTENTS
 from core.responses import RESPONSES
 from core.app_control import AppControl
 from core.search import Search
+from core.conversation import Conversation
 
 
 class Brain:
@@ -14,12 +15,93 @@ class Brain:
         self.language = Language()
         self.app = AppControl()
         self.search = Search()
+        self.conversation = Conversation()
 
+        print("🧠 Conversation memory ready.")
+
+
+    # =========================================================
+    # SAVE CONVERSATION
+    # =========================================================
+
+    def save_conversation(self, command, response):
+
+        self.conversation.remember(
+            command=command,
+            response=response
+        )
+
+
+    # =========================================================
+    # MAIN PROCESS
+    # =========================================================
 
     def process(self, command):
 
+        original_command = command
+
+        # -----------------------------------------
+        # Save previous command BEFORE processing
+        # -----------------------------------------
+
+        previous_command = self.conversation.get_last_command()
+
+        response = self._process(
+            original_command,
+            previous_command
+        )
+
+        # -----------------------------------------
+        # Save CURRENT command after processing
+        # -----------------------------------------
+
+        self.save_conversation(
+            original_command,
+            response
+        )
+
+        return response
+
+
+    # =========================================================
+    # INTERNAL PROCESS
+    # =========================================================
+
+    def _process(self, command, previous_command=None):
+
         lang = self.language.detect(command)
+
         command = command.lower().strip()
+
+
+        # =====================================================
+        # CONVERSATION MEMORY
+        # =====================================================
+
+        if command in [
+
+            "what did i just say",
+            "what did i say",
+            "what did i just tell you",
+            "what did i tell you",
+            "what was my last message",
+            "what was my last command",
+            "maine abhi kya kaha",
+            "maine abhi kya bola",
+            "maine kya kaha",
+            "maine kya bola"
+
+        ]:
+
+            if previous_command:
+
+                return (
+                    f'You just said "{previous_command}", Boss. 😊'
+                )
+
+            return (
+                "Boss, I don't remember what you just said."
+            )
 
 
         # =====================================================
@@ -94,6 +176,7 @@ class Brain:
             if self.memory.data.get("owner_name"):
 
                 self.memory.data["owner_name"] = None
+
                 self.memory.save()
 
                 return (
@@ -166,7 +249,8 @@ class Brain:
 
                 return (
                     f"Okay Boss. "
-                    f"I have forgotten your {self.memory_label(key)}. 🧹"
+                    f"I have forgotten your "
+                    f"{self.memory_label(key)}. 🧹"
                 )
 
             return (
@@ -187,6 +271,7 @@ class Brain:
             "mera naam hai "
 
         ]
+
 
         for pattern in name_patterns:
 
@@ -226,9 +311,10 @@ class Brain:
 
         ]
 
+
         if command in name_questions:
 
-            saved_name = self.memory.data.get("owner_name")
+            saved_name = self.memory.recall("owner_name")
 
             if saved_name:
 
@@ -258,6 +344,7 @@ class Brain:
             "my college is ": "college",
             "my course is ": "course",
             "my degree is ": "degree",
+
             "my favorite subject is ": "favorite_subject",
             "my favourite subject is ": "favorite_subject",
 

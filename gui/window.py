@@ -76,6 +76,9 @@ class CandyWindow(ctk.CTk):
         # ---------- Wake Word ----------
         self.wake_word = WakeWord()
 
+        # ---------- Conversation State ----------
+        self.active_mode = False
+
         # ---------- Start Assistant ----------
         self.voice_thread = threading.Thread(
             target=self.start_assistant,
@@ -104,55 +107,86 @@ class CandyWindow(ctk.CTk):
         while True:
 
             # =================================================
-            # SLEEPING
+            # SLEEPING MODE
             # =================================================
 
-            self.after(
-                0,
-                lambda: self.status.update_status(
-                    "💤 Sleeping..."
-                )
-            )
-
-            command = listener.listen()
-
-            if not command:
-                continue
-
-            # =================================================
-            # CHECK WAKE WORD
-            # =================================================
-
-            if not self.wake_word.detected(command):
-
-                print("💤 Wake word not detected.")
-
-                continue
-
-            print("✨ Wake word detected!")
-
-            # =================================================
-            # REMOVE WAKE WORD
-            # =================================================
-
-            command_after_wake = self.remove_wake_word(command)
-
-            # =================================================
-            # WAKE WORD ONLY
-            # =================================================
-
-            if not command_after_wake:
+            if not self.active_mode:
 
                 self.after(
                     0,
                     lambda: self.status.update_status(
-                        "👋 Hello Boss..."
+                        "💤 Sleeping..."
                     )
                 )
 
-                speaker.speak(
-                    "Yes Boss?"
+                command = listener.listen()
+
+                if not command:
+                    continue
+
+                # ---------------------------------------------
+                # Wake Word Detection
+                # ---------------------------------------------
+
+                if not self.wake_word.detected(command):
+
+                    print("💤 Wake word not detected.")
+
+                    continue
+
+                print("✨ Wake word detected!")
+
+                # ---------------------------------------------
+                # Enter Active Mode
+                # ---------------------------------------------
+
+                self.active_mode = True
+
+                command_after_wake = self.remove_wake_word(
+                    command
                 )
+
+                # ---------------------------------------------
+                # Wake Word Only
+                # ---------------------------------------------
+
+                if not command_after_wake:
+
+                    self.after(
+                        0,
+                        lambda: self.status.update_status(
+                            "👋 Hello Boss..."
+                        )
+                    )
+
+                    speaker.speak(
+                        "Yes Boss?"
+                    )
+
+                    self.after(
+                        0,
+                        lambda: self.status.update_status(
+                            "🎤 Listening..."
+                        )
+                    )
+
+                    command_after_wake = listener.listen()
+
+                    if not command_after_wake:
+
+                        self.active_mode = False
+
+                        print(
+                            "💤 No command. Back to sleep."
+                        )
+
+                        continue
+
+            # =================================================
+            # ACTIVE MODE
+            # =================================================
+
+            else:
 
                 self.after(
                     0,
@@ -161,19 +195,38 @@ class CandyWindow(ctk.CTk):
                     )
                 )
 
-                # Listen for actual command
                 command_after_wake = listener.listen()
 
                 if not command_after_wake:
-
-                    self.after(
-                        0,
-                        lambda: self.status.update_status(
-                            "💤 Sleeping..."
-                        )
-                    )
-
                     continue
+
+            # =================================================
+            # CHECK SLEEP COMMAND
+            # =================================================
+
+            if self.is_sleep_command(
+                command_after_wake
+            ):
+
+                self.after(
+                    0,
+                    lambda: self.status.update_status(
+                        "💤 Sleeping..."
+                    )
+                )
+
+                speaker.speak(
+                    "Okay Boss. I'll wait."
+                )
+
+                self.active_mode = False
+
+                print(
+                    "💤 Conversation ended. "
+                    "Back to sleep."
+                )
+
+                continue
 
             # =================================================
             # THINKING
@@ -187,7 +240,8 @@ class CandyWindow(ctk.CTk):
             )
 
             print(
-                f"🧠 Processing: {command_after_wake}"
+                f"🧠 Processing: "
+                f"{command_after_wake}"
             )
 
             response = brain.process(
@@ -210,17 +264,73 @@ class CandyWindow(ctk.CTk):
             )
 
             # =================================================
-            # BACK TO SLEEP
+            # CONTINUE CONVERSATION
             # =================================================
 
-            self.after(
-                0,
-                lambda: self.status.update_status(
-                    "💤 Sleeping..."
-                )
-            )
+            if self.active_mode:
 
-            print("💤 Back to sleep.")
+                self.after(
+                    0,
+                    lambda: self.status.update_status(
+                        "🎤 Listening..."
+                    )
+                )
+
+                print(
+                    "🟢 Still listening..."
+                )
+
+            else:
+
+                self.after(
+                    0,
+                    lambda: self.status.update_status(
+                        "💤 Sleeping..."
+                    )
+                )
+
+                print(
+                    "💤 Back to sleep."
+                )
+
+    # =========================================================
+    # SLEEP COMMAND DETECTION
+    # =========================================================
+
+    def is_sleep_command(self, command):
+
+        command = command.lower().strip()
+
+        sleep_commands = [
+
+            "bye",
+            "goodbye",
+            "good bye",
+            "okay bye",
+            "ok bye",
+
+            "go to sleep",
+            "sleep",
+            "sleep now",
+
+            "stop listening",
+            "stop listening candy",
+            "stop",
+
+            "that's all",
+            "thats all",
+            "that is all",
+
+            "i am done",
+            "i'm done",
+            "we are done",
+
+            "bas",
+            "bas itna hi"
+
+        ]
+
+        return command in sleep_commands
 
     # =========================================================
     # REMOVE WAKE WORD
@@ -231,6 +341,7 @@ class CandyWindow(ctk.CTk):
         command = command.lower().strip()
 
         wake_words = [
+
             "hey candy",
             "hi candy",
             "hello candy",
@@ -242,6 +353,7 @@ class CandyWindow(ctk.CTk):
             "hello kandi",
 
             "candy"
+
         ]
 
         # Longest phrases first
